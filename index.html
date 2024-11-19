@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HLS Player</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/izitoast/1.4.0/css/iziToast.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.0/lib/anime.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
+
+    #vanta-bg {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+    }
+
+    .fetching-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.9);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+      color: white;
+      font-size: 24px;
+      flex-direction: column;
+    }
+
+    .player-wrapper {
+      display: none;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    video {
+      width: 90%;
+      max-width: 800px;
+      border: 2px solid white;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+      min-height: 300px;
+    }
+
+    /* Adjust video frame for mobile view */
+    @media (max-width: 768px) {
+      video {
+        max-height: 300px;
+      }
+    }
+
+    /* Wave Animation */
+    .wave-progress {
+      position: relative;
+      width: 150px;
+      height: 40px;
+      overflow: hidden;
+      border-radius: 50px;
+      margin-top: 20px;
+    }
+
+    .wave {
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: #00bcd4;
+      animation: waveAnimation 5s infinite;
+    }
+
+    @keyframes waveAnimation {
+      0% {
+        left: -100%;
+      }
+      50% {
+        left: 100%;
+      }
+      100% {
+        left: -100%;
+      }
+    }
+
+    .report-btn {
+      background-color: #f44336;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 20px;
+      display: none; /* Initially hidden */
+    }
+
+  </style>
+</head>
+<body>
+  <div id="vanta-bg"></div>
+  
+  <div class="fetching-overlay">
+    <div style="text-align: center;">Fetching From i1server</div>
+    <div id="timer">5</div>
+
+    <!-- Wave Progress Bar -->
+    <div class="wave-progress">
+      <div class="wave"></div>
+    </div>
+    
+    <!-- Report Button -->
+    <button class="report-btn" id="report-btn">Report Issue</button>
+  </div>
+  
+  <div class="player-wrapper">
+    <video id="hls-player" controls></video>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta/dist/vanta.halo.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/izitoast/1.4.0/js/iziToast.min.js"></script>
+
+  <script>
+    // Initialize Vanta.js Background Animation
+    VANTA.HALO({
+      el: "#vanta-bg",
+      backgroundColor: 0x0f0f0f,
+      color1: 0xffffff,
+      color2: 0x0099ff
+    });
+
+    // Fetching Animation Timer
+    let countdown = 5;
+    const timer = document.getElementById("timer");
+    const fetchingOverlay = document.querySelector(".fetching-overlay");
+    const playerWrapper = document.querySelector(".player-wrapper");
+    const videoPlayer = document.getElementById("hls-player");
+    const reportButton = document.getElementById("report-btn");
+
+    // Timer Interval
+    const timerInterval = setInterval(() => {
+      countdown--;
+      timer.textContent = countdown;
+
+      if (countdown <= 0) {
+        clearInterval(timerInterval);
+        fetchingOverlay.style.display = "none";
+        playerWrapper.style.display = "flex";
+        initPlayer();
+        iziToast.success({
+          title: "Success",
+          message: "HLS Player loaded successfully!",
+        });
+        
+        // Show Report Button
+        reportButton.style.display = "inline-block"; // Make the report button visible
+      }
+    }, 1000);
+
+    // Initialize HLS.js Player
+    function initPlayer() {
+      const hls = new Hls();
+      const streamURL = "https://tralvoxmoon.xyz/file2/GN+ezBJUES3+saJ147hsBNjCC7XB2scaxhEnqOekbf83g9AckCOvM0+cclZCv9Xfx+0AyL7~h8Q1pJ3~AXuCTXN3ZuDF22FWTuZ6SHGOGnKJa5NMSvZME0AyMEb~2k22i+KpDuAb63vhH6z46VqLQKedGW71uYcxSkRYSKk4OkA=/cGxheWxpc3QubTN1OA==.m3u8"; // Replace with your HLS stream URL
+      if (Hls.isSupported()) {
+        hls.loadSource(streamURL);
+        hls.attachMedia(videoPlayer);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          videoPlayer.play();
+        });
+      } else if (videoPlayer.canPlayType("application/vnd.apple.mpegurl")) {
+        videoPlayer.src = streamURL;
+        videoPlayer.addEventListener("loadedmetadata", () => {
+          videoPlayer.play();
+        });
+      } else {
+        iziToast.error({
+          title: "Error",
+          message: "HLS format not supported in this browser.",
+        });
+      }
+    }
+
+    // Report Issue Button Click Handler
+    reportButton.addEventListener('click', () => {
+      window.open("https://forms.gle/your-google-form-link", "_blank");
+    });
+  </script>
+</body>
+</html>
+
